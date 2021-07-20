@@ -34,7 +34,35 @@ def softmax_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    num_classes = W.shape[1]
+    num_train = X.shape[0]
+
+    for i in range(num_train):
+        scores = X[i].dot(W)
+        
+        # numeric stability를 위해 normaliztion trick
+        scores -= np.max(scores)
+
+        # loss 계산
+        exp_scores = np.exp(scores)
+        sum_exp_scores = np.sum(exp_scores)
+
+        loss -= np.log(exp_scores[y[i]]/sum_exp_scores)
+
+        # gradient 계산
+        # 수식(https://stackoverflow.com/questions/41663874/cs231n-how-to-calculate-gradient-for-softmax-loss-function)
+        for j in range(num_classes):
+            if j == y[i]:
+                continue
+            dW[:,j] += exp_scores[j]/sum_exp_scores * X[i]
+        dW[:,y[i]] += (exp_scores[y[i]]/sum_exp_scores - 1)* X[i]
+
+
+    loss /= num_train
+    dW /= num_train
+
+    loss += reg * np.sum(W * W)    
+    dW += reg * 2*W 
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -59,6 +87,34 @@ def softmax_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+    num_train = X.shape[0]
+
+    # scores = Wx ; (num_train, num_classes)
+    scores = np.matmul(X,W)
+    # normaliztion trick
+    scores -= np.max(scores, axis=1, keepdims=True)
+    # e 씌우기
+    exp_scores = np.exp(scores)
+    
+    # 각 x마다 모든 class의 score 더하기 ; (num_train, 1)
+    sum_exp_scores = np.sum(exp_scores, axis=1).reshape(num_train, 1)
+    # correct_class_scores ; (num_train,1)
+    exp_correct_scores = exp_scores[range(num_train), y].reshape(num_train, 1)
+
+    # loss 계산
+    losses = -np.log(exp_correct_scores/sum_exp_scores)
+    loss = np.sum(losses)/num_train
+    loss += reg * np.sum(W * W) 
+
+    # gradient 계산
+    #probability
+    p = exp_scores / sum_exp_scores
+    p[range(num_train), y] = (exp_correct_scores / sum_exp_scores - 1).reshape(num_train,)
+
+    # dW 구하기
+    dW = np.matmul(X.T, p)
+    dW /= num_train
+    dW += reg * 2*W 
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
